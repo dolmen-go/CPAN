@@ -9,17 +9,17 @@ import (
 	"net/textproto"
 )
 
-type IndexEntry struct {
+type PackagesIndexEntry struct {
 	Package string `json:"package"`
 	Version string `json:"version"`
 	Path    string `json:"path"`
 }
 
-var ReadIndexBufferSize int = 4096
+var ReadPackagesIndexBufferSize int = 4096
 
-func ReadIndex(r io.Reader) (
+func ReadPackagesIndex(r io.Reader) (
 	header map[string][]string,
-	entries <-chan *IndexEntry,
+	entries <-chan *PackagesIndexEntry,
 	done chan error,
 ) {
 	done = make(chan error)
@@ -35,14 +35,14 @@ func ReadIndex(r io.Reader) (
 		return nil, nil, done
 	}
 
-	ent := make(chan *IndexEntry, 5)
+	ent := make(chan *PackagesIndexEntry, 5)
 
 	go func() {
 		s := bufio.NewScanner(headerR.R)
 		headerR = nil
 	LOOP:
 		for s.Scan() {
-			var entry IndexEntry
+			var entry PackagesIndexEntry
 			line := s.Bytes()
 			i := bytes.IndexByte(line, ' ')
 			if i == -1 {

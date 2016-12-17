@@ -18,7 +18,7 @@ func main() {
 
 	defer f.Close()
 
-	_, entries, done := CPAN.ReadIndex(f)
+	_, entries, done := CPAN.ReadPackagesIndex(f)
 
 	sep := "[\n"
 LOOP:
