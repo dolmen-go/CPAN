@@ -15,10 +15,10 @@ var PAUSEPublicKey *packet.PublicKey
 
 func init() {
 	var dsaPubKey dsa.PublicKey
-	dsaPubKey.P, _ = new(big.Int).SetString("b1381c98d1224106e26816b1f6868a91167cb8db7818e95de3ab5b9380663f3cf6b13fe4aaaf7473c4f72de2f25cb28a38f29c01b0c1cbad67ce46adbacdbe9e2a098cabf090a368336916de4710a2de47b82819ae691122e918da65253de32001b439aca5406ba5857ccdf64cbf964842583d5b54eeeba045394aeb35e0e92b", 16)
-	dsaPubKey.Q, _ = new(big.Int).SetString("a2c0a9f5db4d00c847933c6cf14247e62dd4cdbd", 16)
-	dsaPubKey.G, _ = new(big.Int).SetString("454ba0013cb0e7d45ea8dcdfcaf1887b8604548d0bbd088789b31940893064f8cf55f72bab946b09d732873c5ea3da6271203b3ced3329b276dafebab8d4c1c1a7b970d2a55ea7ba51398abc61ce58a4493272ff8d90cd331cadd4729df7e6268f4f460ca6308f068166981b9837cf3180862e4103a1bc24a7c2f77215c6244f", 16)
-	dsaPubKey.Y, _ = new(big.Int).SetString("972692c1610963a8963d503349baaf271e12a2587057759ceb0b72ccd05485dcf2ae3ffba073e28120a5e672534f3452a56bf4916c7e9d307b06232f309c63c8e40b534b4ae8350aedb6fdff821453efe38a5eb1a607167f28756bbf73d5822440e4c0ebd6622ca2f7ee73d5909c5bb64e482737f177a4372b5554a2e5bfab64", 16)
+	dsaPubKey.P, _ = new(big.Int).SetString("vvcmhykpch3ecutekargc8il3ylj8jhwdg5zpp4rta1p5bq5m6ksst42mp3vz2fgjgyx972tn1t230q9fhn8df67cg5ax1de4n57twa91n1y9ykx237pz8jbha697207fheuhn22y6rkqla89x355laa5qblyjalroq590nxiq5yqef4ojryiisvhdq36ghlijrwob", 36)
+	dsaPubKey.Q, _ = new(big.Int).SetString("j0eo2kih470xnmi1h48euaf9p3jju0t", 36)
+	dsaPubKey.G, _ = new(big.Int).SetString("cgmqmiys12cxkm2ea4kq50xkwrj0hljx2hvq552fwlc6qpxam1rg8nbc4tiyisu4d1g9lze2i0eh1ph98gakbu74tfdjhnae5e21jajqd6dsn27gkgntht135lfjv2v4kiffhcay86ukt1erwvoqku5nq3zksek4xvnox8qran1ej3lhg00m02vmqvp57ddbhblmj3", 36)
+	dsaPubKey.Y, _ = new(big.Int).SetString("r6ktcw24rezvnmqnkgd69z578mhcjhxkzipw8kdb1dz686i5u208mh9jau8g3ois3khw63haw8pi3dkh7gmv1mpom5rkgwijiyl40lhrcvda8yfzedsurob6i67a6rrm9181giq7q1c5bby3triiqyoj5ngjm9hjz1j6nj630k9sy3jdg5zj51cyj4765yc5b4xf8k", 36)
 
 	PAUSEPublicKey = packet.NewDSAPublicKey(time.Unix(1044279440, 0), &dsaPubKey)
 }
