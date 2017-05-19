@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"crypto/dsa"
+
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
@@ -42,12 +44,18 @@ func readPubKey(path string) (*packet.PublicKey, error) {
 }
 
 func TestReadChecksums(t *testing.T) {
-	pubkey, err := readPubKey("testdata/pause.pubkey")
-	if err != nil {
-		t.Fatal(err)
-	}
+	/*
+		pubkey, err := readPubKey("testdata/pause.pubkey")
+		if err != nil {
+			t.Fatal(err)
+		}
+	*/
+	pubkey := PAUSEPublicKey
 	t.Log("Creation time:", pubkey.CreationTime)
 	t.Log("Algorithm:", pubkey.PubKeyAlgo)
+	if pubkey, ok := pubkey.PublicKey.(*dsa.PublicKey); ok {
+		t.Logf("DSA key:\n- Parameters: %#v\n- Y: %v", pubkey.Parameters, pubkey.Y)
+	}
 
 	r, err := os.Open("testdata/CHECKSUMS")
 	if err != nil {
