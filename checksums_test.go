@@ -1,12 +1,11 @@
 package CPAN
 
 import (
+	"crypto/dsa"
 	"errors"
 	//"fmt"
 	"os"
 	"testing"
-
-	"crypto/dsa"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
@@ -50,7 +49,8 @@ func TestReadChecksums(t *testing.T) {
 			t.Fatal(err)
 		}
 	*/
-	pubkey := PAUSEPublicKey
+	keyring := PAUSEKeyRing
+	pubkey := keyring.(openpgp.EntityList)[0].PrimaryKey
 	t.Log("Creation time:", pubkey.CreationTime)
 	t.Log("Algorithm:", pubkey.PubKeyAlgo)
 	if pubkey, ok := pubkey.PublicKey.(*dsa.PublicKey); ok {
@@ -61,7 +61,7 @@ func TestReadChecksums(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checksums, err := ReadCheckSums(r, pubkey)
+	checksums, err := ReadCheckSums(r, keyring)
 	if err != nil {
 		t.Fatal(err)
 	}

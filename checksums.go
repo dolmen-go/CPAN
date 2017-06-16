@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 
@@ -54,6 +55,12 @@ func parseCheckSums(buf []byte) (map[string]CheckSum, error) {
 	}
 	buf = buf[:j+1]
 
+	// Special case for /authors/id/CHECKSUMS that has 'size' for 'RECENT-2d.yaml' as a string instead of int
+	if idx := bytes.Index(buf, []byte(`'size' => '35228'`)); idx >= 0 {
+		buf[idx+10] = ' '
+		buf[idx+16] = ' '
+	}
+
 	// Transform the Perl hashref into JSON
 	// FIXME fragile code
 	for i, c := range buf {
@@ -81,7 +88,7 @@ func parseCheckSums(buf []byte) (map[string]CheckSum, error) {
 
 // ReadCheckSums loads the content of a CHECKSUMS file.
 // The PGP signature is verified.
-func ReadCheckSums(r io.Reader, pubkey *packet.PublicKey) (map[string]CheckSum, error) {
+func ReadCheckSums(r io.Reader, keyring openpgp.KeyRing) (map[string]CheckSum, error) {
 	content, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -103,15 +110,40 @@ func ReadCheckSums(r io.Reader, pubkey *packet.PublicKey) (map[string]CheckSum, 
 		return nil, fmt.Errorf("error reading signature: %s", err)
 	}
 
-	sig, ok := pkt.(*packet.Signature)
-	if !ok {
-		return nil, errors.New("invalid signature")
+	var keyId uint64
+	var hash hash.Hash
+	var verifySignature func(pubkey *packet.PublicKey) error
+	switch sig := pkt.(type) {
+	case *packet.Signature:
+		keyId = *sig.IssuerKeyId
+		hash = sig.Hash.New()
+		verifySignature = func(pubkey *packet.PublicKey) error {
+			return pubkey.VerifySignature(hash, sig)
+		}
+	case *packet.SignatureV3:
+		keyId = sig.IssuerKeyId
+		hash = sig.Hash.New()
+		verifySignature = func(pubkey *packet.PublicKey) error {
+			return pubkey.VerifySignatureV3(hash, sig)
+		}
+	default:
+		return nil, fmt.Errorf("invalid signature: got %T", pkt)
 	}
 
-	hash := sig.Hash.New()
 	hash.Write(block.Bytes)
 
-	err = pubkey.VerifySignature(hash, sig)
+	// FIXME: use KeysByIdUsage
+	keys := keyring.KeysById(keyId)
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("no PAUSE key with id 0x%X", keyId)
+	}
+
+	for _, pubkey := range keys {
+		err = verifySignature(pubkey.PublicKey)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("verify failure: %s", err)
 	}

@@ -9,10 +9,8 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
-	"text/template"
-	//"fmt"
-	"crypto/dsa"
 	"os"
+	"text/template"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
@@ -43,6 +41,7 @@ func readKeyRing(path string) (openpgp.EntityList, error) {
 		return keyring, err
 	}
 
+	fmt.Println("Applying workaround for https://github.com/golang/go/issues/20686")
 	// Below is the workaround for https://github.com/golang/go/issues/20686
 	// We basically bypass some UserId signature checks because some details of the signature are not yet supported
 
@@ -83,8 +82,6 @@ func readKeyRing(path string) (openpgp.EntityList, error) {
 			if _, ok := err.(pgperrors.UnsupportedError); ok {
 				fmt.Printf("Skip packet: %s\n", err)
 				continue
-			} else {
-				fmt.Printf("%T", err)
 			}
 			return nil, err
 		}
@@ -125,7 +122,7 @@ func readKeyRing(path string) (openpgp.EntityList, error) {
 			}
 		case *packet.Signature:
 			if pkt.SigType == packet.SigTypeKeyRevocation {
-				fmt.Printf("Skip packet %T\n", pkt)
+				fmt.Printf("Skip %T packet\n", pkt)
 			} else if pkt.SigType == packet.SigTypeDirectSignature {
 				// TODO: RFC4880 5.2.1 permits signatures
 				// directly on keys (eg. to bind additional
@@ -137,7 +134,7 @@ func readKeyRing(path string) (openpgp.EntityList, error) {
 			}
 		default:
 			// Skip anything else (revocation lists...)
-			fmt.Printf("Skip packet %T\n", pkt)
+			fmt.Printf("Skip %T packet\n", pkt)
 		}
 	}
 
@@ -153,20 +150,65 @@ import (
 	"math/big"
 	"time"
 
+	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/packet"
+	"golang.org/x/crypto/openpgp/elgamal"
 )
 
-// PAUSEPublicKey is the embeded public key of the central PAUSE indexer
-var PAUSEPublicKey *packet.PublicKey
+// PAUSEKeyRing contains the embeded public keys of the central PAUSE indexer
+var PAUSEKeyRing openpgp.KeyRing
+
+{{define "PublicKey"}}{{/* printf "%#v" . */}}
+{{- if (eq .PubKeyAlgo 0x11) -}}
+newDSAPublicKey(
+	{{CreationTime .}}, // CreationTime
+	"{{Text .PublicKey.P 36}}", // P
+	"{{Text .PublicKey.Q 36}}", // Q
+	"{{Text .PublicKey.G 36}}", // G
+	"{{Text .PublicKey.Y 36}}", // Y
+){{- else if (eq .PubKeyAlgo 0x10) -}}
+newElGamalPublicKey(
+	{{CreationTime .}}, // CreationTime
+	"{{Text .PublicKey.G 36}}", // G
+	"{{Text .PublicKey.P 36}}", // P
+	"{{Text .PublicKey.Y 36}}", // Y
+){{- else -}}
+nil /* Unsupported public key algo {{printf "%#x" .PubKeyAlgo}} */
+{{- end -}}
+{{end}}
 
 func init() {
-	var dsaPubKey dsa.PublicKey
-	dsaPubKey.P, _ = new(big.Int).SetString("{{Text .DSA.P 36}}", 36)
-	dsaPubKey.Q, _ = new(big.Int).SetString("{{Text .DSA.Q 36}}", 36)
-	dsaPubKey.G, _ = new(big.Int).SetString("{{Text .DSA.G 36}}", 36)
-	dsaPubKey.Y, _ = new(big.Int).SetString("{{Text .DSA.Y 36}}", 36)
+	// FIXME also dump self signatures to expose usage flags
 
-	PAUSEPublicKey = packet.NewDSAPublicKey(time.Unix({{.CreationTime.sec}}, {{.CreationTime.nsec}}), &dsaPubKey)
+	{{- /* printf "%#v" . */}}
+	var e openpgp.Entity
+	e.PrimaryKey = {{template "PublicKey" .PrimaryKey}}
+	{{if .Subkeys}}
+	var pubkey *packet.PublicKey
+	{{end}}
+	{{- range .Subkeys}}
+	pubkey = {{template "PublicKey" .PublicKey}}
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+	{{end}}
+	PAUSEKeyRing = openpgp.EntityList{&e}
+}
+
+func newDSAPublicKey(creationTime time.Time, P36, Q36, G36, Y36 string) *packet.PublicKey {
+	var dsaPubKey dsa.PublicKey
+	dsaPubKey.P, _ = new(big.Int).SetString(P36, 36)
+	dsaPubKey.Q, _ = new(big.Int).SetString(Q36, 36)
+	dsaPubKey.G, _ = new(big.Int).SetString(G36, 36)
+	dsaPubKey.Y, _ = new(big.Int).SetString(Y36, 36)
+	return packet.NewDSAPublicKey(creationTime, &dsaPubKey)
+}
+
+func newElGamalPublicKey(creationTime time.Time, G36, P36, Y36 string) *packet.PublicKey {
+	var elgamalPubKey elgamal.PublicKey
+	elgamalPubKey.G, _ = new(big.Int).SetString(G36, 36)
+	elgamalPubKey.P, _ = new(big.Int).SetString(P36, 36)
+	elgamalPubKey.Y, _ = new(big.Int).SetString(Y36, 36)
+	return packet.NewElGamalPublicKey(creationTime, &elgamalPubKey)
 }
 `
 
@@ -176,30 +218,26 @@ func main() {
 		fmt.Fprint(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Printf("Keyring: %#v\n", keyring)
-	//fmt.Printf("%d keys\n", len(keyring))
-	pubkey := keyring[0].PrimaryKey
-	if dsaPubKey, ok := pubkey.PublicKey.(*dsa.PublicKey); ok {
-		//f := (*big.Int).Text
-		//fmt.Println(f(dsaPubKey.P, 36))
-		t := &codegen.CodeTemplate{
-			Template: template.Must(template.New("").Funcs(template.FuncMap{
-				"Text": (*big.Int).Text,
-			}).Parse(tmpl)),
-		}
-		err = t.CreateFile("pause_pubkey.go", map[string]interface{}{
-			"CreationTime": map[string]int64{
-				"sec":  pubkey.CreationTime.Unix(),
-				"nsec": pubkey.CreationTime.UnixNano() % 1000000000,
+
+	// fmt.Printf("Keyring: %#v\n", keyring)
+	// fmt.Printf("PrimaryKey: %#v\n", keyring[0].PrimaryKey)
+	// fmt.Printf("Subkeys: %#v\n", keyring[0].Subkeys)
+	// fmt.Printf("Subkeys[0]: %#v\n", keyring[0].Subkeys[0].PublicKey)
+
+	t := &codegen.CodeTemplate{
+		Template: template.Must(template.New("").Funcs(template.FuncMap{
+			"Text": (*big.Int).Text,
+			"CreationTime": func(pubkey *packet.PublicKey) string {
+				return fmt.Sprintf("time.Unix(%d, %d)",
+					pubkey.CreationTime.Unix(),
+					pubkey.CreationTime.Unix()%1000000000,
+				)
 			},
-			"DSA": dsaPubKey,
-		})
-		if err != nil {
-			fmt.Fprint(os.Stderr, err)
-			os.Exit(1)
-		}
-	} else {
-		fmt.Fprint(os.Stderr, "Not a DSA public key")
+		}).Parse(tmpl)),
+	}
+	err = t.CreateFile("pause_pubkey.go", keyring[0])
+	if err != nil {
+		fmt.Fprint(os.Stderr, err)
 		os.Exit(1)
 	}
 }
