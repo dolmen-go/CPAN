@@ -7,18 +7,106 @@ import (
 	"math/big"
 	"time"
 
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/elgamal"
 	"golang.org/x/crypto/openpgp/packet"
 )
 
-// PAUSEPublicKey is the embeded public key of the central PAUSE indexer
-var PAUSEPublicKey *packet.PublicKey
+// PAUSEKeyRing contains the embeded public keys of the central PAUSE indexer
+var PAUSEKeyRing openpgp.KeyRing
 
 func init() {
-	var dsaPubKey dsa.PublicKey
-	dsaPubKey.P, _ = new(big.Int).SetString("vvcmhykpch3ecutekargc8il3ylj8jhwdg5zpp4rta1p5bq5m6ksst42mp3vz2fgjgyx972tn1t230q9fhn8df67cg5ax1de4n57twa91n1y9ykx237pz8jbha697207fheuhn22y6rkqla89x355laa5qblyjalroq590nxiq5yqef4ojryiisvhdq36ghlijrwob", 36)
-	dsaPubKey.Q, _ = new(big.Int).SetString("j0eo2kih470xnmi1h48euaf9p3jju0t", 36)
-	dsaPubKey.G, _ = new(big.Int).SetString("cgmqmiys12cxkm2ea4kq50xkwrj0hljx2hvq552fwlc6qpxam1rg8nbc4tiyisu4d1g9lze2i0eh1ph98gakbu74tfdjhnae5e21jajqd6dsn27gkgntht135lfjv2v4kiffhcay86ukt1erwvoqku5nq3zksek4xvnox8qran1ej3lhg00m02vmqvp57ddbhblmj3", 36)
-	dsaPubKey.Y, _ = new(big.Int).SetString("r6ktcw24rezvnmqnkgd69z578mhcjhxkzipw8kdb1dz686i5u208mh9jau8g3ois3khw63haw8pi3dkh7gmv1mpom5rkgwijiyl40lhrcvda8yfzedsurob6i67a6rrm9181giq7q1c5bby3triiqyoj5ngjm9hjz1j6nj630k9sy3jdg5zj51cyj4765yc5b4xf8k", 36)
+	// FIXME also dump self signatures to expose usage flags
+	var e openpgp.Entity
+	e.PrimaryKey = newDSAPublicKey(
+		time.Unix(1044279440, 44279440), // CreationTime
+		"vvcmhykpch3ecutekargc8il3ylj8jhwdg5zpp4rta1p5bq5m6ksst42mp3vz2fgjgyx972tn1t230q9fhn8df67cg5ax1de4n57twa91n1y9ykx237pz8jbha697207fheuhn22y6rkqla89x355laa5qblyjalroq590nxiq5yqef4ojryiisvhdq36ghlijrwob", // P
+		"j0eo2kih470xnmi1h48euaf9p3jju0t", // Q
+		"cgmqmiys12cxkm2ea4kq50xkwrj0hljx2hvq552fwlc6qpxam1rg8nbc4tiyisu4d1g9lze2i0eh1ph98gakbu74tfdjhnae5e21jajqd6dsn27gkgntht135lfjv2v4kiffhcay86ukt1erwvoqku5nq3zksek4xvnox8qran1ej3lhg00m02vmqvp57ddbhblmj3", // G
+		"r6ktcw24rezvnmqnkgd69z578mhcjhxkzipw8kdb1dz686i5u208mh9jau8g3ois3khw63haw8pi3dkh7gmv1mpom5rkgwijiyl40lhrcvda8yfzedsurob6i67a6rrm9181giq7q1c5bby3triiqyoj5ngjm9hjz1j6nj630k9sy3jdg5zj51cyj4765yc5b4xf8k", // Y
+	)
 
-	PAUSEPublicKey = packet.NewDSAPublicKey(time.Unix(1044279440, 0), &dsaPubKey)
+	var pubkey *packet.PublicKey
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1044279474, 44279474), // CreationTime
+		"6", // G
+		"w77ruv09bbxxt4kcuzzwr3lhk8xuo9viz0j05ebzm7mji3531elhp5cfeyvybtbpbtauy90v6646x1cpvxc8801om6jxd247q8b857fvfb1pavrfv1vipmumey4v76ok4togpg71aup95k915w2xnl6ar1l9hxf35r8qshz0x0eh2qhwimos77vsr7bl8q0gk8tvgz18useufr52ir8h9oulcrdwn9ew0skb6v1uivkgppiqdru9vllsly695x1o3l6wsrm7chtu2tuvw501tbr6ja5z32t80rp71fsp70oqf2xidnuz2ravdujdoawet7a3vd89thkenawf3gjuyo4a0adqsq27c12liub4ea8lfcwxxypflbwkpzks1hhon6hj9czfmh4b", // P
+		"fqg2w2rhsolr6a0ixn2vz6uib1y3s3k6ld1bfr25qj4kcljb2eaccnx7x8dojeur9taf3g5tor91rl8fjqzlj54s4iv4d3tnjjzgj4zssdnolymkg40f20ydmhohxnrjz9ornllhncrf4lgpr1i7b6h4cs151vg17pwmxdamr0ujjgrek70rld8mthfnvx7dd3ktxg8pxhj1edwll74zw7nccz784mr64hzzd96nfkmuu8yv28hchgkzxp9g8x3p6fjwa75azl5ghc557ks5hwcfn5ropx6rqsks6m2xufnkfzw06qutv5suyhze6t23on1z6v6y3pkf14v5ay1r664bgsljv1l3oj8c2orfeh34srxvp4wqzc6ucu16o9uxvp9w8f56np5m", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1105305763, 105305763), // CreationTime
+		"5", // G
+		"1c4b3zdrlfer0eum3kx953dbvmyiv7ja6twfnlcdot7fmowrjxysk1gyl2gdjqgw51gk0ko9iniwi0hn4c48laheq08adniucsftpng0rmurf5nn1ywk164sqm5ul0uqlmy9r751kye14hawhkc9wihmn5lz9htr9lg6kyp0hmlrqof1wte5mmlt3tfdm2g84sgk5ttq1hqqq79b9zbgd8947jdetcxb6zyxn53oc16t3wnuytrv71l1zznvwugsurf5rwb18jjyiieglrsayumkemzlpcjpspj9fztcxviagmodu8qburc1xbfgxmzehbexhl2ticcslxerf05r8cgff9ozq1pla0mfb2yuklk1nyhixzbhsa6buabn8kezo0q5zhqmylmjz", // P
+		"1058wgpwmpl8gwc7xp3tc94gbl3kgdel04d1z8zm4s9rvmkjh65ubo1zg1kvn9urwbf1wgnton8ztktr08h4qzrc3c0au0bglycem504o3tvyfnf5q3ol3mirn0ctphv6bg4hxl7yyg76fs8k5bgdkgs2oljhe4899grf6oqye1cuvdx2j9yot8ar1noeu4s013xr1einzj7xhtjxjvi54fu6wny6juld3iw54g7h0w3jadj0v1wihurnfj90l5u56w7ipx971f1sbc719xedfxs5135j59s07wsv5docivg1magr1rzoe80ce5dhekfzqvja1nlu9kffbj9xxyv1dkopl4o4j020iozin663gzesq52c2kj0xwc5matzo01iadsivvdjagpc", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1167688377, 167688377), // CreationTime
+		"7", // G
+		"1ivd27jqv3t9nt6k8fxintwmzzzwyfssk6ijr4xav32v1plznuuibhbn03kvjxi0plrrephmctisbzbkenos5swq2m8iyo452y69q0m2rf7zoduc60y6k7n1bagwlbzh2wa7vc77jv8gafk3fhwhaae4g60eqlub6n10hsa8yen45kouaa0gmmah3hr9e1mi7dm3i6d6qdfs3je8ciy6noa1zo4bfe2zl2e70smka6z3p62gnh5nfot36bwvspx3obkd53er9wx0i43crszxhddjit3aqt9porquoc7hv0ec1lu6tuanak8fpx0qdj8gpc583cx4dwxva42tbnzou8ibjx1pebbvus2l4f7uqbvi32rlld1ot5yi556gx6di2xl88jqsm6hvz", // P
+		"172zkpfjdtg2bq4gd8ndlrvuo0vyjbx0xhdsmw2xriht45b1larfpxvz1oi0i84fkvjymy175uqdz573egdnegt1gnfagkclgyq0bntt3kkbqo4qm7v3ja9wbv0gz3tm3ocozqzcejbxczs7yhaa3foyg8kcntufgpog47753kq83ylb11w4eic012ai5h9ku18vsnuox4b9od0cvpfcwh9u1c1regc0415wdqyid1t8xia24tc9kw52mdzlwkl135t4c0jflu2erit33h4may2jeofo41zuarvru5fhv79i1fl1k9li3z1my97ly06lt1ja3b954dfd306ik893u4wv70i45lehcaufo9o0jl3a4o6sr394utmxh1naqfrn4v8qz08vcv1mu", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1232658503, 232658503), // CreationTime
+		"5", // G
+		"1cl7y8xpry0ld03u5msix3olaw77nfvk52bc7k5flpyz8kwgrigfr5b672m5qm7smc7c4tb5xzh56bgu31rvfn35i1cnhc0pjhz4q302v7kqe7c1oria4iwlqbwlav663w0iq1mcbb3iud76zjullc0m07d9j13vrd5k1j1jp86mq6880beql22nj9dsr11bdw1gjcyc1mk5uafmdqkfhwr4l4zzdrg3ipyvy3opg13lup0lb61w6asm54tczzeaxzdfud157mzw96ipdahpxoqzx42yiggb8dr5atz9612ylw32o93i341gyxtkjk4jmwr00y5d5ejxbroh81kcamrvgm79gt2uttum1rrwx4elpno4awqdqnh5vzh1plel56wfvaeofs4kz", // P
+		"e02a53hhf0arloyeeudxu8eq0pfv8rl1n11l9eaapu04s170sifi7er6q1w9ypllvl2aknctt34q1fzfu534alwyb4vbuwzh7qnoo8g6m8h7tljvd4mal8ul0sncdjt2kw98eriw6vjryv8qlj612yaijnk4pnvgtjpwh34zjflmnpcl7d8k3914f9kqhelykelvfnsvfq1tqboy6ev6o54uviwjqr8dqu7ledwcibnonvizmp82xu6m69ba0i3l44bmhk6udet2ujq0t228i6bc5f7wqnadw69p3ahqmtvuh9hnenxeokxc7chzosbmq3nzk5b4yzv08c1w70wk7ek7ttxed7f828irniex9zptbp6ngrt6zg1mwl16omles29weqshijwu",  // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1299444774, 299444774), // CreationTime
+		"5", // G
+		"1f7dntsg9p21frzkdy72dlul1m9oeionbl89deu75cm3ek0xwu0ez355i39gr9lw8595hgy9ioc3vf11ezisvr3r9ij9pbi716myyb0ayrk86j0und765oetqgk5xaj0wcpzc7igc97dnpsbm5alsuocxdyg98z5ljqtv51hvv7gb4a1gx03jk3eltr1olo9iuxe4q4c2yxl79gjfs292y6r64xw26sz2a720jbhvgd9qou7a3vr3k30bvjj4zu6cwqk6z5e07223xdojcbc6f4a0z9b6eoy0l7faofyko2hu9ln6h8iqxcytvvpmtcrw0nduqwo4ej1n23ihtwboovc8zkff6ithm73v2umhhnafvf6a1mg7sadcjrp4d0v53lb2a3eei4lz", // P
+		"13hzymz3xgbgoxh888i6otqg9z1278tsijediigq6sxrbn75zy3b46scyo7oh2bzgundmq9il21rsmr89e6l3i82vsmppsfesrhllw1q0c4kaxlt20lnvcz5q6clyzaol7jdhpnw9f9psg8hozbc97tjvh57b1fqi8jhavza0gmriofoi4yutmcn8xsxk360jy6wxgweohk9u28485bexsy6pk6ke24w5xt99rgh73vkmvsilprpi1dz4256ki47wd4xyc3bq33m0xmts0yhsif3c02lv0k6vy07xhi6ksg1umqo1ztz72kjazn6kk2i458eqpvdj2yrsh9ppg5d2nduyv0hd0ol1hozwiviyjwadmwlvs0gj5nw4qybiizga6dsdb5yjdhjx", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1367684289, 367684289), // CreationTime
+		"6", // G
+		"yyhgc6690yvhhutb016wqcvxob4p2it1d192g0mm6q1v7ybm3j5lcbh06f3o0lv9ygwiwalnpsiw4fbsgej08yqhbj1k73mu1otgjiz6m7kt311d29g74s67p4bqbbcptnuemd3faw18w0yz8ydvggsql1nmpwdn0wd0gdjnhusajc994f7800z6pswyug1maw7iws0o8htyp32q2lzkq04uu8wl38wniw5aqiapxpkc5mqoeawi7r3b82v5g2qdik2f1ktzpvcec5qr96z7xs5sdppqwcaxx4grmubpj93r8dftuy44ioe4tiiu6x0arqc4omnpn348pnf0mvk7b5kh1rxnezcuujxu0z6ed3kbwi1zotdiq4e06iym95w5flhyssulnj1n", // P
+		"tu2ud4ws14v22qbsur4mbyypwnvze3n22ydll0n5c6zztn1h2e4vu5ul3af21sliw4wiukvv8bjtd3tzfs2vck49tz256j46myw8tqh9knmf2c1vverpjppejq4xfdgwfgj5dj4nlvudy9jp4e48l0rc8c2cwclg527lpkgw1ckbmd9x1mb5ww2mj00yj70yxyigce8l08pe0zwpda5x0b6eloejdyz68trbja8dsftpqxnjqctysivjs225uac1vv99nl4i3dckkakec0ijvakxrihvj9dp5fiw8lcs4a9hdzrnzsvpksaaxwnd3off7ykb1jz6bz37u8vg8q7h5a6xb988c0s2br0z6zdonsf8aywigfa1fw5jhzvgdgmzpuytrmsx4fp7", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	pubkey = newElGamalPublicKey(
+		time.Unix(1423406851, 423406851), // CreationTime
+		"5", // G
+		"zuqhcfk8ejmct9g5nocpkor8fne37u84hgkkwxy04ammhuur2vxkonke7st4mbzecaznxnjpukd29nbfxfu56kvm6utzi30tefm5du86isbpm7kedzesnl3uv1t10ai0kbv9ai0cq4du023ngy53kl1r99enq10c5e17zwpf5og7wa4vpy21pjpuohkmb2fmzo57b4twjcyn2vw3u5bst573444issrzszo0jlcx4zndib90wbf4oac22h516vmjgwz866gbedpteqb747qmk6rned6ofrlxj2ra6qqzk44mtsumny6cxsbbur6s2lxhput2v7qzfwbnk0ykvsvwh8n18qbgf9cywndlitos0dsiafby13wjedhj48ghfi45znax9haz3nwz", // P
+		"74sb3zmcei703uunthafjtsv8sihdivlldm13n1postjp4hoohs6sw1jx5yyzlo9ye95eaatg0le4hk9kirikk5dfre0qnn0m606swnmx97wud2vhrhb4yfi0t4g8cxuksap7ipqwifr9zqfenqvzy21blsqrgf5yv5k399mzrqbl9owchz68u35yeyjm2xc6gpqsm8hk2ayz7g82s4nasq1yy3ju1xp67g5msm8bsrd48aph3jy0c89pj6e3qjtueldem89l69vv3vik2tsqnjhlaswt6ucmnzys5af1ruxdmwd9y4mvzi7gnzbhwyuyfg33zgjxufoyiu35yb9nldg7yd412azisb2sfmxdtiqyajg9ekys8gy2idkn3yttgzyeolrwiov", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
+	PAUSEKeyRing = openpgp.EntityList{&e}
+}
+
+func newDSAPublicKey(creationTime time.Time, P36, Q36, G36, Y36 string) *packet.PublicKey {
+	var dsaPubKey dsa.PublicKey
+	dsaPubKey.P, _ = new(big.Int).SetString(P36, 36)
+	dsaPubKey.Q, _ = new(big.Int).SetString(Q36, 36)
+	dsaPubKey.G, _ = new(big.Int).SetString(G36, 36)
+	dsaPubKey.Y, _ = new(big.Int).SetString(Y36, 36)
+	return packet.NewDSAPublicKey(creationTime, &dsaPubKey)
+}
+
+func newElGamalPublicKey(creationTime time.Time, G36, P36, Y36 string) *packet.PublicKey {
+	var elgamalPubKey elgamal.PublicKey
+	elgamalPubKey.G, _ = new(big.Int).SetString(G36, 36)
+	elgamalPubKey.P, _ = new(big.Int).SetString(P36, 36)
+	elgamalPubKey.Y, _ = new(big.Int).SetString(Y36, 36)
+	return packet.NewElGamalPublicKey(creationTime, &elgamalPubKey)
 }

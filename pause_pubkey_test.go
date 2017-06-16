@@ -4,11 +4,8 @@ import (
 	"testing"
 )
 
-func TestPAUSEPublicKey(t *testing.T) {
-	if PAUSEPublicKey.KeyIdShortString() != "450F89EC" {
-		t.Errorf("Invalid PAUSE public key: %s", PAUSEPublicKey.KeyIdShortString())
-	}
-	if PAUSEPublicKey.KeyIdString() != "328DA867450F89EC" {
-		t.Errorf("Invalid PAUSE public key: %s", PAUSEPublicKey.KeyIdString())
+func TestPAUSEKeyRing(t *testing.T) {
+	if len(PAUSEKeyRing.KeysById(0x328DA867450F89EC)) == 0 {
+		t.Error("Invalid PAUSE key ring: key 0x328DA867450F89EC not found")
 	}
 }
