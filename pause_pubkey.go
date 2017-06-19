@@ -91,6 +91,15 @@ func init() {
 	pubkey.IsSubkey = true
 	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
 
+	pubkey = newElGamalPublicKey(
+		time.Unix(1497232408, 497232408), // CreationTime
+		"5", // G
+		"1j52wnapcaq3wookg2hdvb6vwukwvry2m7z0xygiylwuotef2m5mqr9wnf7q8ciacxkkcsohhzfuorkqdfpb4r13zb1fxj6chhtizsy17knzsl8zpkrn8rz30hvae5tck2d2rt2tra4iovfg0un0lat7bj9awanog37bv3m7nlvlvvsebr5teaq6o8tdfj61dmorrbgmntnmp52fuebkszm0g2oo91ahsnig8nxwpfo4ohoiad2ccmxlpwdl9ts9ku29vdoxuxz6h5qjfw3ryaa9s16dwm1an947zgkwqmm1lkgbhe2lolsbd44ucq6jm3kg9rf63moyl01yiulcatjxbdkgxx6uvrr3ea8yuaechqkeetyfzbk8a2z7dmtfk9nf1ry9v6y1b", // P
+		"14hyuvkhqt2gvoapge50ww05dmtfkt6dcle1kgln5ctngyl4nd3c0gfx5z9oa5yybqzr5527x1vyzp52gutmli0k4dc5lxvmtum9uyh48a01uwhj1mry0b72fstf4z3wjswocp5x2vu1634i5w1erm2jart7a2u6neinbmiesx5efvc9cmlstocg306qwy04fo0kjpqfa0md8lc65g3lawvn6bfh3qchufk6w1sovl9d79o4ojvbsvh2migvmegi4mudfo21q4kya7geqncfavsrld3x1icnwk7kyqe5nxr1ulpl7xmida15ti3w0e13m1pfo8p2u4g5xggfwrj1dgc5mp7b9jtqmhe70wqhdhv0fbrx0z7rzra6v49104qbt8vmrwbh4e7oe", // Y
+	)
+	pubkey.IsSubkey = true
+	e.Subkeys = append(e.Subkeys, openpgp.Subkey{PublicKey: pubkey})
+
 	PAUSEKeyRing = openpgp.EntityList{&e}
 }
 
